@@ -309,9 +309,9 @@ function Dashboard() {
         challansResponse,
       ] = await Promise.all([
 
-        fetch(
-          "/api/customers",
-          {
+       fetch(
+  "https://mini-erp-crm-api-0zu8.onrender.com/api/customers",
+  {
             method: "GET",
             headers,
           }
