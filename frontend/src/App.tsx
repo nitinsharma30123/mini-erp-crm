@@ -2,7 +2,6 @@
 import type { FormEvent } from "react";
 import Login from "./Login";
 import "./App.css";
-
 type Page =
   | "dashboard"
   | "customers"
@@ -793,7 +792,7 @@ function Customers() {
   const [saving, setSaving] =
     useState(false);
 
-  const [form, setForm] = useState({
+    const [form, setForm] = useState({
     customer_name: "",
     mobile: "",
     email: "",
@@ -1301,6 +1300,21 @@ function Products() {
 
   const [search, setSearch] =
     useState("");
+  const [showAddForm, setShowAddForm] =
+    useState(false);
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [form, setForm] = useState({
+  product_name: "",
+  sku: "",
+  category: "",
+  unit_price: "",
+  current_stock: "",
+  minimum_stock_alert_quantity: "",
+  warehouse_location: "",
+});
 
   const fetchProducts = async () => {
 
@@ -1357,6 +1371,81 @@ function Products() {
   useEffect(() => {
     fetchProducts();
   }, []);
+  const handleAddProduct = async (
+    e: FormEvent
+  ) => {
+  e.preventDefault();
+
+  try {
+    setSaving(true);
+    setError("");
+
+    const token =
+      localStorage.getItem("token");
+
+    const response = await fetch(
+      "https://mini-erp-crm-api-0zu8.onrender.com/api/products",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          product_name:
+            form.product_name,
+          sku: form.sku,
+          category:
+            form.category || null,
+          unit_price:
+            Number(form.unit_price),
+          current_stock:
+            Number(form.current_stock || 0),
+          minimum_stock_alert_quantity:
+            Number(
+              form.minimum_stock_alert_quantity ||
+                0
+            ),
+          warehouse_location:
+            form.warehouse_location ||
+            null,
+        }),
+      }
+    );
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message ||
+          "Failed to create product"
+      );
+    }
+
+    setForm({
+      product_name: "",
+      sku: "",
+      category: "",
+      unit_price: "",
+      current_stock: "",
+      minimum_stock_alert_quantity: "",
+      warehouse_location: "",
+    });
+
+    setShowAddForm(false);
+
+    await fetchProducts();
+
+  } catch (err: any) {
+    setError(
+      err.message ||
+        "Failed to create product"
+    );
+  } finally {
+    setSaving(false);
+  }
+};
 
   const filteredProducts =
     products.filter((product) => {
@@ -1395,16 +1484,176 @@ function Products() {
 
         </div>
 
-        <button
-          className="primary-btn"
-          onClick={fetchProducts}
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+          }}
         >
-          ↻ Refresh
-        </button>
+          <button
+            className="primary-btn"
+            onClick={() => setShowAddForm(true)}
+          >
+            + Add Product
+          </button>
+
+          <button
+            className="primary-btn"
+            onClick={fetchProducts}
+          >
+            ↻ Refresh
+          </button>
+        </div>
 
       </div>
 
       <div className="panel">
+
+        {showAddForm && (
+          <div
+            style={{
+              padding: "20px",
+              marginBottom: "20px",
+              borderBottom: "1px solid #e5e7eb",
+            }}
+          >
+            <h3 style={{ marginBottom: "16px" }}>
+              Add Product
+            </h3>
+
+            <form onSubmit={handleAddProduct}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(2, minmax(0, 1fr))",
+                  gap: "14px",
+                }}
+              >
+                <input
+                  className="search"
+                  placeholder="Product Name *"
+                  value={form.product_name}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      product_name: e.target.value,
+                    })
+                  }
+                  required
+                />
+
+                <input
+                  className="search"
+                  placeholder="SKU *"
+                  value={form.sku}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      sku: e.target.value,
+                    })
+                  }
+                  required
+                />
+
+                <input
+                  className="search"
+                  placeholder="Category"
+                  value={form.category}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      category: e.target.value,
+                    })
+                  }
+                />
+
+                <input
+                  className="search"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Unit Price *"
+                  value={form.unit_price}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      unit_price: e.target.value,
+                    })
+                  }
+                  required
+                />
+
+                <input
+                  className="search"
+                  type="number"
+                  min="0"
+                  placeholder="Current Stock"
+                  value={form.current_stock}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      current_stock: e.target.value,
+                    })
+                  }
+                />
+
+                <input
+                  className="search"
+                  type="number"
+                  min="0"
+                  placeholder="Minimum Stock Alert"
+                  value={form.minimum_stock_alert_quantity}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      minimum_stock_alert_quantity:
+                        e.target.value,
+                    })
+                  }
+                />
+
+                <input
+                  className="search"
+                  placeholder="Warehouse Location"
+                  value={form.warehouse_location}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      warehouse_location:
+                        e.target.value,
+                    })
+                  }
+                />
+              </div>
+
+              <div
+                style={{
+                  marginTop: "16px",
+                  display: "flex",
+                  gap: "10px",
+                }}
+              >
+                <button
+                  type="submit"
+                  className="primary-btn"
+                  disabled={saving}
+                >
+                  {saving ? "Saving..." : "Save Product"}
+                </button>
+
+                <button
+                  type="button"
+                  className="primary-btn"
+                  onClick={() => setShowAddForm(false)}
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         <div className="search-row">
 
@@ -2179,5 +2428,7 @@ function Challans() {
     </div>
   );
 }
-
 export default App;
+
+
+
