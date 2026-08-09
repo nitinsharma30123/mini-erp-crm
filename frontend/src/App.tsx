@@ -2616,6 +2616,49 @@ function Challans() {
       setSaving(false);
     }
   };
+  const updateChallanStatus = async (
+  id: number,
+  status: string
+) => {
+  try {
+    setError("");
+
+    const token =
+      localStorage.getItem("token");
+
+    const response = await fetch(
+      `https://mini-erp-crm-api-0zu8.onrender.com/api/challans/${id}/status`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:
+            `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          status,
+        }),
+      }
+    );
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message ||
+          "Failed to update challan status"
+      );
+    }
+
+    await fetchChallans();
+  } catch (err: any) {
+    setError(
+      err.message ||
+        "Failed to update challan status"
+    );
+  }
+};
 
   const filteredChallans =
     challans.filter(
@@ -3116,6 +3159,44 @@ function Challans() {
                               : "-"
                           }
                         </td>
+                        <td>
+  {challan.status === "DRAFT" && (
+    <div
+      style={{
+        display: "flex",
+        gap: "8px",
+      }}
+    >
+      <button
+        className="primary-btn"
+        onClick={() =>
+          updateChallanStatus(
+            challan.id,
+            "CONFIRMED"
+          )
+        }
+      >
+        Confirm
+      </button>
+
+      <button
+        className="secondary-btn"
+        onClick={() =>
+          updateChallanStatus(
+            challan.id,
+            "CANCELLED"
+          )
+        }
+      >
+        Cancel
+      </button>
+    </div>
+  )}
+
+  {challan.status !== "DRAFT" && (
+    <span>-</span>
+  )}
+</td>
 
                       </tr>
                     )
@@ -3133,4 +3214,6 @@ function Challans() {
     </div>
   );
 }
+
+
 export default App;
