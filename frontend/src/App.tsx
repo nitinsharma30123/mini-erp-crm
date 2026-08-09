@@ -1,4 +1,5 @@
 ﻿import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import Login from "./Login";
 import "./App.css";
 
@@ -774,7 +775,6 @@ function Dashboard() {
 ===================================================== */
 
 function Customers() {
-
   const [customers, setCustomers] =
     useState<Customer[]>([]);
 
@@ -787,10 +787,27 @@ function Customers() {
   const [search, setSearch] =
     useState("");
 
+  const [showAddForm, setShowAddForm] =
+    useState(false);
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [form, setForm] = useState({
+    customer_name: "",
+    mobile: "",
+    email: "",
+    business_name: "",
+    gst_number: "",
+    customer_type: "RETAIL",
+    address: "",
+    status: "LEAD",
+    follow_up_date: "",
+    notes: "",
+  });
+
   const fetchCustomers = async () => {
-
     try {
-
       setLoading(true);
       setError("");
 
@@ -807,35 +824,25 @@ function Customers() {
         }
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
-
         throw new Error(
           data.message ||
             "Failed to fetch customers"
         );
-
       }
 
       setCustomers(
-        Array.isArray(data)
-          ? data
-          : []
+        Array.isArray(data) ? data : []
       );
-
     } catch (err: any) {
-
       setError(
         err.message ||
           "Unable to load customers"
       );
-
     } finally {
-
       setLoading(false);
-
     }
   };
 
@@ -843,11 +850,71 @@ function Customers() {
     fetchCustomers();
   }, []);
 
+  const handleAddCustomer = async (
+    e: FormEvent
+  ) => {
+    e.preventDefault();
+
+    try {
+      setSaving(true);
+      setError("");
+
+      const token =
+        localStorage.getItem("token");
+
+      const response = await fetch(
+        "https://mini-erp-crm-api-0zu8.onrender.com/api/customers",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            ...form,
+            follow_up_date:
+              form.follow_up_date || null,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Failed to create customer"
+        );
+      }
+
+      setForm({
+        customer_name: "",
+        mobile: "",
+        email: "",
+        business_name: "",
+        gst_number: "",
+        customer_type: "RETAIL",
+        address: "",
+        status: "LEAD",
+        follow_up_date: "",
+        notes: "",
+      });
+
+      setShowAddForm(false);
+      await fetchCustomers();
+    } catch (err: any) {
+      setError(
+        err.message ||
+          "Failed to create customer"
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const filteredCustomers =
     customers.filter((customer) => {
-
-      const text =
-        search.toLowerCase();
+      const text = search.toLowerCase();
 
       return (
         customer.customer_name
@@ -863,39 +930,252 @@ function Customers() {
           ?.toLowerCase()
           .includes(text)
       );
-
     });
 
   return (
     <div className="content">
-
       <div className="page-actions">
-
         <div>
-
-          <h2>
-            Customers
-          </h2>
-
+          <h2>Customers</h2>
           <p>
             Manage your customer relationships
           </p>
-
         </div>
 
-        <button
-          className="primary-btn"
-          onClick={fetchCustomers}
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+          }}
         >
-          ↻ Refresh
-        </button>
+          <button
+            className="primary-btn"
+            onClick={() =>
+              setShowAddForm(true)
+            }
+          >
+            + Add Customer
+          </button>
 
+          <button
+            className="primary-btn"
+            onClick={fetchCustomers}
+          >
+            ↻ Refresh
+          </button>
+        </div>
       </div>
 
       <div className="panel">
+        {showAddForm && (
+          <div
+            style={{
+              padding: "20px",
+              marginBottom: "20px",
+              borderBottom:
+                "1px solid #e5e7eb",
+            }}
+          >
+            <h3
+              style={{
+                marginBottom: "16px",
+              }}
+            >
+              Add Customer
+            </h3>
+
+            <form
+              onSubmit={handleAddCustomer}
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(2, minmax(0, 1fr))",
+                  gap: "14px",
+                }}
+              >
+                <input
+                  className="search"
+                  placeholder="Customer Name *"
+                  value={form.customer_name}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      customer_name:
+                        e.target.value,
+                    })
+                  }
+                  required
+                />
+
+                <input
+                  className="search"
+                  placeholder="Mobile *"
+                  value={form.mobile}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      mobile: e.target.value,
+                    })
+                  }
+                  required
+                />
+
+                <input
+                  className="search"
+                  type="email"
+                  placeholder="Email"
+                  value={form.email}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      email: e.target.value,
+                    })
+                  }
+                />
+
+                <input
+                  className="search"
+                  placeholder="Business Name"
+                  value={form.business_name}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      business_name:
+                        e.target.value,
+                    })
+                  }
+                />
+
+                <input
+                  className="search"
+                  placeholder="GST Number"
+                  value={form.gst_number}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      gst_number:
+                        e.target.value,
+                    })
+                  }
+                />
+
+                <select
+                  className="search"
+                  value={form.customer_type}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      customer_type:
+                        e.target.value,
+                    })
+                  }
+                  required
+                >
+                  <option value="RETAIL">
+                    Retail
+                  </option>
+                  <option value="WHOLESALE">
+                    Wholesale
+                  </option>
+                  <option value="DISTRIBUTOR">
+                    Distributor
+                  </option>
+                </select>
+
+                <select
+                  className="search"
+                  value={form.status}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      status: e.target.value,
+                    })
+                  }
+                >
+                  <option value="LEAD">
+                    Lead
+                  </option>
+                  <option value="ACTIVE">
+                    Active
+                  </option>
+                  <option value="INACTIVE">
+                    Inactive
+                  </option>
+                </select>
+
+                <input
+                  className="search"
+                  type="date"
+                  value={form.follow_up_date}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      follow_up_date:
+                        e.target.value,
+                    })
+                  }
+                />
+
+                <input
+                  className="search"
+                  placeholder="Address"
+                  value={form.address}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      address: e.target.value,
+                    })
+                  }
+                />
+
+                <input
+                  className="search"
+                  placeholder="Notes"
+                  value={form.notes}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      notes: e.target.value,
+                    })
+                  }
+                />
+              </div>
+
+              <div
+                style={{
+                  marginTop: "16px",
+                  display: "flex",
+                  gap: "10px",
+                }}
+              >
+                <button
+                  type="submit"
+                  className="primary-btn"
+                  disabled={saving}
+                >
+                  {saving
+                    ? "Saving..."
+                    : "Save Customer"}
+                </button>
+
+                <button
+                  type="button"
+                  className="primary-btn"
+                  onClick={() =>
+                    setShowAddForm(false)
+                  }
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         <div className="search-row">
-
           <input
             className="search"
             placeholder="Search customers..."
@@ -904,7 +1184,6 @@ function Customers() {
               setSearch(e.target.value)
             }
           />
-
         </div>
 
         {loading && (
@@ -930,13 +1209,9 @@ function Customers() {
         {!loading &&
           !error &&
           filteredCustomers.length > 0 && (
-
             <div className="table-wrapper">
-
               <table>
-
                 <thead>
-
                   <tr>
                     <th>Customer</th>
                     <th>Business</th>
@@ -945,38 +1220,26 @@ function Customers() {
                     <th>Status</th>
                     <th>Address</th>
                   </tr>
-
                 </thead>
 
                 <tbody>
-
                   {filteredCustomers.map(
                     (customer) => (
-
                       <tr key={customer.id}>
-
                         <td>
-
                           <strong>
-                            {
-                              customer.customer_name
-                            }
+                            {customer.customer_name}
                           </strong>
 
                           <span className="table-sub">
-                            {
-                              customer.email ||
-                              "No email"
-                            }
+                            {customer.email ||
+                              "No email"}
                           </span>
-
                         </td>
 
                         <td>
-                          {
-                            customer.business_name ||
-                            "-"
-                          }
+                          {customer.business_name ||
+                            "-"}
                         </td>
 
                         <td>
@@ -984,14 +1247,11 @@ function Customers() {
                         </td>
 
                         <td>
-                          {
-                            customer.customer_type ||
-                            "-"
-                          }
+                          {customer.customer_type ||
+                            "-"}
                         </td>
 
                         <td>
-
                           <span
                             className={`badge ${
                               customer.status ===
@@ -1003,36 +1263,23 @@ function Customers() {
                                 : "danger-badge"
                             }`}
                           >
-                            {
-                              customer.status ||
-                              "-"
-                            }
+                            {customer.status ||
+                              "-"}
                           </span>
-
                         </td>
 
                         <td>
-                          {
-                            customer.address ||
-                            "-"
-                          }
+                          {customer.address ||
+                            "-"}
                         </td>
-
                       </tr>
-
                     )
                   )}
-
                 </tbody>
-
               </table>
-
             </div>
-
           )}
-
       </div>
-
     </div>
   );
 }
