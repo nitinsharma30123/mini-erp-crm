@@ -2254,12 +2254,37 @@ function Inventory() {
   );
 }
 function Challans() {
+  type ChallanCustomer = {
+    id: number;
+    customer_name: string;
+  };
+
+  type ChallanProduct = {
+    id: number;
+    product_name: string;
+    sku: string;
+    current_stock: number;
+  };
+
+  type ChallanItem = {
+    product_id: number;
+    quantity: number;
+  };
 
   const [challans, setChallans] =
     useState<Challan[]>([]);
 
+  const [customers, setCustomers] =
+    useState<ChallanCustomer[]>([]);
+
+  const [products, setProducts] =
+    useState<ChallanProduct[]>([]);
+
   const [loading, setLoading] =
     useState(true);
+
+  const [saving, setSaving] =
+    useState(false);
 
   const [error, setError] =
     useState("");
@@ -2270,10 +2295,29 @@ function Challans() {
   const [statusFilter, setStatusFilter] =
     useState("ALL");
 
+  const [showForm, setShowForm] =
+    useState(false);
+
+  const [challanNumber, setChallanNumber] =
+    useState("");
+
+  const [customerId, setCustomerId] =
+    useState("");
+
+  const [items, setItems] =
+    useState<ChallanItem[]>([]);
+
+  const [selectedProduct, setSelectedProduct] =
+    useState("");
+
+  const [selectedQuantity, setSelectedQuantity] =
+    useState("");
+
+  const API =
+    "https://mini-erp-crm-api-0zu8.onrender.com";
+
   const fetchChallans = async () => {
-
     try {
-
       setLoading(true);
       setError("");
 
@@ -2281,9 +2325,8 @@ function Challans() {
         localStorage.getItem("token");
 
       const response = await fetch(
-        "https://mini-erp-crm-api-0zu8.onrender.com/api/challans",
+        `${API}/api/challans`,
         {
-          method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -2294,12 +2337,10 @@ function Challans() {
         await response.json();
 
       if (!response.ok) {
-
         throw new Error(
           data.message ||
             "Failed to fetch challans"
         );
-
       }
 
       setChallans(
@@ -2307,49 +2348,300 @@ function Challans() {
           ? data
           : []
       );
-
     } catch (err: any) {
-
       setError(
         err.message ||
           "Unable to load challans"
       );
-
     } finally {
-
       setLoading(false);
+    }
+  };
 
+  const fetchCustomers = async () => {
+    try {
+      const token =
+        localStorage.getItem("token");
+
+      const response = await fetch(
+        `${API}/api/customers`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Failed to fetch customers"
+        );
+      }
+
+      setCustomers(
+        Array.isArray(data)
+          ? data
+          : []
+      );
+    } catch (err: any) {
+      setError(
+        err.message ||
+          "Unable to load customers"
+      );
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const token =
+        localStorage.getItem("token");
+
+      const response = await fetch(
+        `${API}/api/products`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Failed to fetch products"
+        );
+      }
+
+      setProducts(
+        Array.isArray(data)
+          ? data
+          : []
+      );
+    } catch (err: any) {
+      setError(
+        err.message ||
+          "Unable to load products"
+      );
     }
   };
 
   useEffect(() => {
     fetchChallans();
+    fetchCustomers();
+    fetchProducts();
   }, []);
 
-  const filteredChallans =
-    challans.filter((challan) => {
+  const addItem = () => {
+    if (
+      !selectedProduct ||
+      !selectedQuantity
+    ) {
+      setError(
+        "Please select a product and quantity"
+      );
+      return;
+    }
 
-      const text =
-        search.toLowerCase();
+    const productId =
+      Number(selectedProduct);
 
-      const matchesSearch =
-        challan.challan_number
-          ?.toLowerCase()
-          .includes(text) ||
-        challan.customer_name
-          ?.toLowerCase()
-          .includes(text);
+    const quantity =
+      Number(selectedQuantity);
 
-      const matchesStatus =
-        statusFilter === "ALL" ||
-        challan.status === statusFilter;
+    if (
+      !Number.isInteger(quantity) ||
+      quantity <= 0
+    ) {
+      setError(
+        "Quantity must be a positive integer"
+      );
+      return;
+    }
 
-      return (
-        matchesSearch &&
-        matchesStatus
+    const product =
+      products.find(
+        (p) => p.id === productId
       );
 
-    });
+    if (!product) {
+      setError("Product not found");
+      return;
+    }
+
+    const existingItem =
+      items.find(
+        (item) =>
+          item.product_id === productId
+      );
+
+    const alreadyAdded =
+      existingItem?.quantity || 0;
+
+    if (
+      alreadyAdded + quantity >
+      product.current_stock
+    ) {
+      setError(
+        `Only ${product.current_stock} units available for ${product.product_name}`
+      );
+      return;
+    }
+
+    if (existingItem) {
+      setItems(
+        items.map((item) =>
+          item.product_id === productId
+            ? {
+                ...item,
+                quantity:
+                  item.quantity +
+                  quantity,
+              }
+            : item
+        )
+      );
+    } else {
+      setItems([
+        ...items,
+        {
+          product_id: productId,
+          quantity,
+        },
+      ]);
+    }
+
+    setSelectedProduct("");
+    setSelectedQuantity("");
+    setError("");
+  };
+
+  const removeItem = (
+    productId: number
+  ) => {
+    setItems(
+      items.filter(
+        (item) =>
+          item.product_id !== productId
+      )
+    );
+  };
+
+  const handleCreateChallan = async (
+    e: FormEvent
+  ) => {
+    e.preventDefault();
+
+    if (!challanNumber.trim()) {
+      setError(
+        "Challan number is required"
+      );
+      return;
+    }
+
+    if (!customerId) {
+      setError(
+        "Please select a customer"
+      );
+      return;
+    }
+
+    if (items.length === 0) {
+      setError(
+        "Please add at least one product"
+      );
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError("");
+
+      const token =
+        localStorage.getItem("token");
+
+      const response = await fetch(
+        `${API}/api/challans`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+            Authorization:
+              `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            challan_number:
+              challanNumber.trim(),
+
+            customer_id:
+              Number(customerId),
+
+            items,
+          }),
+        }
+      );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Failed to create challan"
+        );
+      }
+
+      setChallanNumber("");
+      setCustomerId("");
+      setItems([]);
+      setSelectedProduct("");
+      setSelectedQuantity("");
+      setShowForm(false);
+
+      await fetchChallans();
+      await fetchProducts();
+    } catch (err: any) {
+      setError(
+        err.message ||
+          "Failed to create challan"
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const filteredChallans =
+    challans.filter(
+      (challan) => {
+        const text =
+          search.toLowerCase();
+
+        const matchesSearch =
+          challan.challan_number
+            ?.toLowerCase()
+            .includes(text) ||
+          challan.customer_name
+            ?.toLowerCase()
+            .includes(text);
+
+        const matchesStatus =
+          statusFilter === "ALL" ||
+          challan.status ===
+            statusFilter;
+
+        return (
+          matchesSearch &&
+          matchesStatus
+        );
+      }
+    );
 
   return (
     <div className="content">
@@ -2357,25 +2649,306 @@ function Challans() {
       <div className="page-actions">
 
         <div>
-
-          <h2>
-            Challans
-          </h2>
+          <h2>Challans</h2>
 
           <p>
             Manage sales challans
           </p>
-
         </div>
 
-        <button
-          className="primary-btn"
-          onClick={fetchChallans}
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+          }}
         >
-          ↻ Refresh
-        </button>
+          <button
+            className="primary-btn"
+            onClick={() => {
+              setError("");
+              setShowForm(true);
+            }}
+          >
+            + Create Challan
+          </button>
+
+          <button
+            className="primary-btn"
+            onClick={fetchChallans}
+          >
+            ↻ Refresh
+          </button>
+        </div>
 
       </div>
+
+      {error && (
+        <div className="error-box">
+          {error}
+        </div>
+      )}
+
+      {showForm && (
+        <div className="panel">
+
+          <div className="panel-header">
+
+            <div>
+              <h3>
+                Create Challan
+              </h3>
+
+              <p>
+                Create a sales challan
+              </p>
+            </div>
+
+          </div>
+
+          <form
+            onSubmit={
+              handleCreateChallan
+            }
+            style={{
+              padding: "20px",
+            }}
+          >
+
+            <div className="form-grid">
+
+              <input
+                type="text"
+                placeholder="Challan Number"
+                value={challanNumber}
+                onChange={(e) =>
+                  setChallanNumber(
+                    e.target.value
+                  )
+                }
+              />
+
+              <select
+                value={customerId}
+                onChange={(e) =>
+                  setCustomerId(
+                    e.target.value
+                  )
+                }
+              >
+
+                <option value="">
+                  Select Customer
+                </option>
+
+                {customers.map(
+                  (customer) => (
+                    <option
+                      key={customer.id}
+                      value={customer.id}
+                    >
+                      {
+                        customer.customer_name
+                      }
+                    </option>
+                  )
+                )}
+
+              </select>
+
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                marginTop: "20px",
+              }}
+            >
+
+              <select
+                value={selectedProduct}
+                onChange={(e) =>
+                  setSelectedProduct(
+                    e.target.value
+                  )
+                }
+              >
+
+                <option value="">
+                  Select Product
+                </option>
+
+                {products.map(
+                  (product) => (
+                    <option
+                      key={product.id}
+                      value={product.id}
+                    >
+                      {
+                        product.product_name
+                      }{" "}
+                      ({product.sku}) -
+                      Stock:{" "}
+                      {
+                        product.current_stock
+                      }
+                    </option>
+                  )
+                )}
+
+              </select>
+
+              <input
+                type="number"
+                min="1"
+                placeholder="Quantity"
+                value={selectedQuantity}
+                onChange={(e) =>
+                  setSelectedQuantity(
+                    e.target.value
+                  )
+                }
+              />
+
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={addItem}
+              >
+                + Add Item
+              </button>
+
+            </div>
+
+            {items.length > 0 && (
+              <div
+                className="table-wrapper"
+                style={{
+                  marginTop: "20px",
+                }}
+              >
+
+                <table>
+
+                  <thead>
+                    <tr>
+                      <th>
+                        Product
+                      </th>
+
+                      <th>
+                        SKU
+                      </th>
+
+                      <th>
+                        Quantity
+                      </th>
+
+                      <th>
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+
+                    {items.map(
+                      (item) => {
+                        const product =
+                          products.find(
+                            (p) =>
+                              p.id ===
+                              item.product_id
+                          );
+
+                        return (
+                          <tr
+                            key={
+                              item.product_id
+                            }
+                          >
+
+                            <td>
+                              {
+                                product?.product_name ||
+                                "-"
+                              }
+                            </td>
+
+                            <td>
+                              {
+                                product?.sku ||
+                                "-"
+                              }
+                            </td>
+
+                            <td>
+                              {
+                                item.quantity
+                              }
+                            </td>
+
+                            <td>
+                              <button
+                                type="button"
+                                className="secondary-btn"
+                                onClick={() =>
+                                  removeItem(
+                                    item.product_id
+                                  )
+                                }
+                              >
+                                Remove
+                              </button>
+                            </td>
+
+                          </tr>
+                        );
+                      }
+                    )}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                marginTop: "20px",
+              }}
+            >
+
+              <button
+                type="submit"
+                className="primary-btn"
+                disabled={saving}
+              >
+                {saving
+                  ? "Creating..."
+                  : "Create Challan"}
+              </button>
+
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={() => {
+                  setShowForm(false);
+                  setError("");
+                }}
+              >
+                Cancel
+              </button>
+
+            </div>
+
+          </form>
+
+        </div>
+      )}
 
       <div className="panel">
 
@@ -2386,7 +2959,9 @@ function Challans() {
             placeholder="Search challans..."
             value={search}
             onChange={(e) =>
-              setSearch(e.target.value)
+              setSearch(
+                e.target.value
+              )
             }
           />
 
@@ -2425,15 +3000,10 @@ function Challans() {
           </div>
         )}
 
-        {error && (
-          <div className="error-box">
-            {error}
-          </div>
-        )}
-
         {!loading &&
           !error &&
-          filteredChallans.length === 0 && (
+          filteredChallans.length ===
+            0 && (
             <div className="empty">
               No challans found.
             </div>
@@ -2441,8 +3011,8 @@ function Challans() {
 
         {!loading &&
           !error &&
-          filteredChallans.length > 0 && (
-
+          filteredChallans.length >
+            0 && (
             <div className="table-wrapper">
 
               <table>
@@ -2450,7 +3020,6 @@ function Challans() {
                 <thead>
 
                   <tr>
-
                     <th>
                       Challan Number
                     </th>
@@ -2474,7 +3043,6 @@ function Challans() {
                     <th>
                       Date
                     </th>
-
                   </tr>
 
                 </thead>
@@ -2483,19 +3051,18 @@ function Challans() {
 
                   {filteredChallans.map(
                     (challan) => (
-
                       <tr
-                        key={challan.id}
+                        key={
+                          challan.id
+                        }
                       >
 
                         <td>
-
                           <strong>
                             {
                               challan.challan_number
                             }
                           </strong>
-
                         </td>
 
                         <td>
@@ -2539,7 +3106,6 @@ function Challans() {
                         </td>
 
                         <td>
-
                           {
                             challan.created_at
                               ? new Date(
@@ -2549,11 +3115,9 @@ function Challans() {
                                 )
                               : "-"
                           }
-
                         </td>
 
                       </tr>
-
                     )
                   )}
 
@@ -2562,7 +3126,6 @@ function Challans() {
               </table>
 
             </div>
-
           )}
 
       </div>
@@ -2571,6 +3134,3 @@ function Challans() {
   );
 }
 export default App;
-
-
-
