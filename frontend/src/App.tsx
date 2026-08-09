@@ -1807,135 +1807,346 @@ function Products() {
 ===================================================== */
 
 function Inventory() {
+  type InventoryProduct = {
+    id: number;
+    product_name: string;
+    sku: string;
+    current_stock: number;
+  };
 
-  const [movements, setMovements] =
-    useState<StockMovement[]>([]);
+  const [movements, setMovements] = useState<StockMovement[]>([]);
+  const [products, setProducts] = useState<InventoryProduct[]>([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
+  const [showForm, setShowForm] = useState(false);
+
+  const [form, setForm] = useState({
+    product_id: "",
+    quantity_changed: "",
+    movement_type: "IN",
+    reason: "",
+  });
+
+  const API = "https://mini-erp-crm-api-0zu8.onrender.com";
 
   const fetchMovements = async () => {
-
     try {
-
       setLoading(true);
       setError("");
 
-      const token =
-        localStorage.getItem("token");
+      const token = localStorage.getItem("token");
 
       const response = await fetch(
-        "https://mini-erp-crm-api-0zu8.onrender.com/api/stock-movements",
+        `${API}/api/stock-movements`,
         {
-          method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
-
         throw new Error(
-          data.message ||
-            "Failed to fetch stock movements"
+          data.message || "Failed to fetch stock movements"
         );
-
       }
 
-      setMovements(
-        Array.isArray(data)
-          ? data
-          : []
-      );
-
+      setMovements(Array.isArray(data) ? data : []);
     } catch (err: any) {
-
       setError(
-        err.message ||
-          "Unable to load stock movements"
+        err.message || "Unable to load stock movements"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(
+        `${API}/api/products`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
 
-    } finally {
+      const data = await response.json();
 
-      setLoading(false);
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to fetch products"
+        );
+      }
 
+      setProducts(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      setError(
+        err.message || "Unable to load products"
+      );
     }
   };
 
   useEffect(() => {
     fetchMovements();
+    fetchProducts();
   }, []);
 
-  const totalIn =
-    movements
-      .filter(
-        (movement) =>
-          movement.movement_type === "IN"
-      )
-      .reduce(
-        (total, movement) =>
-          total +
-          Number(
-            movement.quantity_changed || 0
-          ),
-        0
+  const handleCreateMovement = async (
+    e: FormEvent
+  ) => {
+    e.preventDefault();
+
+    if (
+      !form.product_id ||
+      !form.quantity_changed ||
+      !form.reason
+    ) {
+      setError(
+        "Product, quantity and reason are required"
+      );
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError("");
+
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(
+        `${API}/api/stock-movements`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            product_id: Number(form.product_id),
+            quantity_changed: Number(
+              form.quantity_changed
+            ),
+            movement_type: form.movement_type,
+            reason: form.reason,
+          }),
+        }
       );
 
-  const totalOut =
-    movements
-      .filter(
-        (movement) =>
-          movement.movement_type === "OUT"
-      )
-      .reduce(
-        (total, movement) =>
-          total +
-          Number(
-            movement.quantity_changed || 0
-          ),
-        0
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to create stock movement"
+        );
+      }
+
+      setForm({
+        product_id: "",
+        quantity_changed: "",
+        movement_type: "IN",
+        reason: "",
+      });
+
+      setShowForm(false);
+
+      await fetchMovements();
+      await fetchProducts();
+    } catch (err: any) {
+      setError(
+        err.message || "Failed to create stock movement"
       );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const totalIn = movements
+    .filter(
+      (movement) =>
+        movement.movement_type === "IN"
+    )
+    .reduce(
+      (total, movement) =>
+        total +
+        Number(movement.quantity_changed || 0),
+      0
+    );
+
+  const totalOut = movements
+    .filter(
+      (movement) =>
+        movement.movement_type === "OUT"
+    )
+    .reduce(
+      (total, movement) =>
+        total +
+        Number(movement.quantity_changed || 0),
+      0
+    );
 
   return (
     <div className="content">
-
       <div className="page-actions">
-
         <div>
-
-          <h2>
-            Inventory
-          </h2>
-
-          <p>
-            Track stock movements
-          </p>
-
+          <h2>Inventory</h2>
+          <p>Track stock movements</p>
         </div>
 
-        <button
-          className="primary-btn"
-          onClick={fetchMovements}
-        >
-          ↻ Refresh
-        </button>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button
+            className="primary-btn"
+            onClick={() => {
+              setError("");
+              setShowForm(true);
+            }}
+          >
+            + Stock Movement
+          </button>
 
+          <button
+            className="primary-btn"
+            onClick={() => {
+              fetchMovements();
+              fetchProducts();
+            }}
+          >
+            ↻ Refresh
+          </button>
+        </div>
       </div>
 
-      <div className="stats-grid">
+      {error && (
+        <div className="error-box">
+          {error}
+        </div>
+      )}
 
+      {showForm && (
+        <div className="panel">
+          <div className="panel-header">
+            <div>
+              <h3>Add Stock Movement</h3>
+              <p>Update product stock</p>
+            </div>
+          </div>
+
+          <form
+            onSubmit={handleCreateMovement}
+            style={{ padding: "20px" }}
+          >
+            <div className="form-grid">
+              <select
+                value={form.product_id}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    product_id: e.target.value,
+                  })
+                }
+              >
+                <option value="">
+                  Select Product
+                </option>
+
+                {products.map((product) => (
+                  <option
+                    key={product.id}
+                    value={product.id}
+                  >
+                    {product.product_name} ({product.sku}) - Stock:{" "}
+                    {product.current_stock}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={form.movement_type}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    movement_type: e.target.value,
+                  })
+                }
+              >
+                <option value="IN">
+                  Stock IN
+                </option>
+                <option value="OUT">
+                  Stock OUT
+                </option>
+              </select>
+
+              <input
+                type="number"
+                min="1"
+                placeholder="Quantity"
+                value={form.quantity_changed}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    quantity_changed: e.target.value,
+                  })
+                }
+              />
+
+              <input
+                type="text"
+                placeholder="Reason"
+                value={form.reason}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    reason: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                marginTop: "15px",
+              }}
+            >
+              <button
+                type="submit"
+                className="primary-btn"
+                disabled={saving}
+              >
+                {saving
+                  ? "Saving..."
+                  : "Save Movement"}
+              </button>
+
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={() => {
+                  setShowForm(false);
+                  setError("");
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <div className="stats-grid">
         <StatCard
           title="Total Movements"
-          value={String(
-            movements.length
-          )}
+          value={String(movements.length)}
           icon="📦"
           text="Inventory transactions"
         />
@@ -1953,25 +2164,14 @@ function Inventory() {
           icon="↘"
           text="Units sold"
         />
-
       </div>
 
       <div className="panel">
-
         <div className="panel-header">
-
           <div>
-
-            <h3>
-              Stock Movement History
-            </h3>
-
-            <p>
-              Recent inventory transactions
-            </p>
-
+            <h3>Stock Movement History</h3>
+            <p>Recent inventory transactions</p>
           </div>
-
         </div>
 
         {loading && (
@@ -1980,14 +2180,7 @@ function Inventory() {
           </div>
         )}
 
-        {error && (
-          <div className="error-box">
-            {error}
-          </div>
-        )}
-
         {!loading &&
-          !error &&
           movements.length === 0 && (
             <div className="empty">
               No stock movements found.
@@ -1995,122 +2188,71 @@ function Inventory() {
           )}
 
         {!loading &&
-          !error &&
           movements.length > 0 && (
-
             <div className="table-wrapper">
-
               <table>
-
                 <thead>
-
                   <tr>
-                    <th>Product</th>
+                    <th>PRODUCT</th>
                     <th>SKU</th>
-                    <th>Type</th>
-                    <th>Quantity</th>
-                    <th>Reason</th>
-                    <th>Created By</th>
-                    <th>Date</th>
+                    <th>TYPE</th>
+                    <th>QUANTITY</th>
+                    <th>REASON</th>
+                    <th>DATE</th>
                   </tr>
-
                 </thead>
 
                 <tbody>
+                  {movements.map((movement) => (
+                    <tr key={movement.id}>
+                      <td>
+                        <strong>
+                          {movement.product_name}
+                        </strong>
+                      </td>
 
-                  {movements.map(
-                    (movement) => (
+                      <td>
+                        {movement.sku}
+                      </td>
 
-                      <tr
-                        key={movement.id}
-                      >
-
-                        <td>
-                          <strong>
-                            {
-                              movement.product_name
-                            }
-                          </strong>
-                        </td>
-
-                        <td>
-                          {
-                            movement.sku ||
-                            "-"
-                          }
-                        </td>
-
-                        <td>
-
-                          <span
-                            className={
-                              movement.movement_type ===
-                              "IN"
-                                ? "badge success"
-                                : "badge danger-badge"
-                            }
-                          >
-                            {
-                              movement.movement_type
-                            }
+                      <td>
+                        {movement.movement_type ===
+                        "IN" ? (
+                          <span className="badge success">
+                            IN
                           </span>
+                        ) : (
+                          <span className="badge warning">
+                            OUT
+                          </span>
+                        )}
+                      </td>
 
-                        </td>
+                      <td>
+                        {movement.quantity_changed}
+                      </td>
 
-                        <td>
-                          {
-                            movement.quantity_changed
-                          }
-                        </td>
+                      <td>
+                        {movement.reason}
+                      </td>
 
-                        <td>
-                          {movement.reason}
-                        </td>
-
-                        <td>
-                          {
-                            movement.created_by ||
-                            "-"
-                          }
-                        </td>
-
-                        <td>
-
-                          {
-                            movement.created_at
-                              ? new Date(
-                                  movement.created_at
-                                ).toLocaleString(
-                                  "en-IN"
-                                )
-                              : "-"
-                          }
-
-                        </td>
-
-                      </tr>
-
-                    )
-                  )}
-
+                      <td>
+                        {movement.created_at
+                          ? new Date(
+                              movement.created_at
+                            ).toLocaleString("en-IN")
+                          : "-"}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
-
               </table>
-
             </div>
-
           )}
-
       </div>
-
     </div>
   );
 }
-
-/* =====================================================
-   CHALLANS
-===================================================== */
-
 function Challans() {
 
   const [challans, setChallans] =
