@@ -115,7 +115,7 @@ function App() {
     <div className="app">
 
       {/* SIDEBAR */}
-
+challan_number
       <aside className="sidebar">
 
         <div className="brand">
@@ -2298,8 +2298,7 @@ function Challans() {
   const [showForm, setShowForm] =
     useState(false);
 
-  const [challanNumber, setChallanNumber] =
-    useState("");
+  
 
   const [customerId, setCustomerId] =
     useState("");
@@ -2538,12 +2537,8 @@ function Challans() {
   ) => {
     e.preventDefault();
 
-    if (!challanNumber.trim()) {
-      setError(
-        "Challan number is required"
-      );
-      return;
-    }
+    
+    
 
     if (!customerId) {
       setError(
@@ -2577,9 +2572,7 @@ function Challans() {
               `Bearer ${token}`,
           },
           body: JSON.stringify({
-            challan_number:
-              challanNumber.trim(),
-
+            
             customer_id:
               Number(customerId),
 
@@ -2598,7 +2591,7 @@ function Challans() {
         );
       }
 
-      setChallanNumber("");
+    
       setCustomerId("");
       setItems([]);
       setSelectedProduct("");
@@ -2759,17 +2752,7 @@ function Challans() {
 
             <div className="form-grid">
 
-              <input
-                type="text"
-                placeholder="Challan Number"
-                value={challanNumber}
-                onChange={(e) =>
-                  setChallanNumber(
-                    e.target.value
-                  )
-                }
-              />
-
+              
               <select
                 value={customerId}
                 onChange={(e) =>
@@ -3214,6 +3197,4 @@ function Challans() {
     </div>
   );
 }
-
-
 export default App;
