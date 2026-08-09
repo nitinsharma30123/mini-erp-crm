@@ -18,7 +18,7 @@ function Login({ onLogin }: LoginProps) {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/auth/login",
+        "https://mini-erp-crm-1-w1gv.onrender.com/auth/login",
         {
           method: "POST",
           headers: {

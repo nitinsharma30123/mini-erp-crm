@@ -310,7 +310,7 @@ function Dashboard() {
       ] = await Promise.all([
 
         fetch(
-          "http://localhost:5000/api/customers",
+          "/api/customers",
           {
             method: "GET",
             headers,
@@ -318,7 +318,7 @@ function Dashboard() {
         ),
 
         fetch(
-          "http://localhost:5000/api/products",
+          "https://mini-erp-crm-1-w1gv.onrender.com/api/products",
           {
             method: "GET",
             headers,
@@ -326,7 +326,7 @@ function Dashboard() {
         ),
 
         fetch(
-          "http://localhost:5000/api/challans",
+          "https://mini-erp-crm-1-w1gv.onrender.com/api/challans",
           {
             method: "GET",
             headers,
@@ -798,7 +798,7 @@ function Customers() {
         localStorage.getItem("token");
 
       const response = await fetch(
-        "http://localhost:5000/api/customers",
+        "https://mini-erp-crm-1-w1gv.onrender.com/api/customers",
         {
           method: "GET",
           headers: {
@@ -1066,7 +1066,7 @@ function Products() {
         localStorage.getItem("token");
 
       const response = await fetch(
-        "http://localhost:5000/api/products",
+        "https://mini-erp-crm-1-w1gv.onrender.com/api/products",
         {
           method: "GET",
           headers: {
@@ -1332,7 +1332,7 @@ function Inventory() {
         localStorage.getItem("token");
 
       const response = await fetch(
-        "http://localhost:5000/api/stock-movements",
+        "https://mini-erp-crm-1-w1gv.onrender.com/api/stock-movements",
         {
           method: "GET",
           headers: {
@@ -1643,7 +1643,7 @@ function Challans() {
         localStorage.getItem("token");
 
       const response = await fetch(
-        "http://localhost:5000/api/challans",
+        "https://mini-erp-crm-1-w1gv.onrender.com/api/challans",
         {
           method: "GET",
           headers: {
